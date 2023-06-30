@@ -5,8 +5,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] LayerMask ignoreLayer;
     [SerializeField] Transform cameraFollow;
     [SerializeField] float speed;
-    private Vector3 destination, target;
-    private bool makeTurn, stopMovement = true;
+    private Vector3 destination, target, turnAngle;
+    private bool makeTurn, stopMovement = true, continousMovement = false;
 
     private void OnEnable()
     {
@@ -19,6 +19,7 @@ public class PlayerController : MonoBehaviour
         {
             case GameState.Running:
                 stopMovement = false;
+                continousMovement = true;
                 target = transform.position + Offset((int)transform.eulerAngles.y);
                 target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
                 break;
@@ -48,33 +49,61 @@ public class PlayerController : MonoBehaviour
         transform.position = Vector3.MoveTowards(transform.position, destination, speed * Time.deltaTime);
         cameraFollow.position = transform.position;
 
-        if (Vector3.Distance(transform.position, destination) < 0.1f && Vector3.Distance(transform.position, destination) > 0f)
+        if(continousMovement)
         {
-            target = transform.position + Offset((int)transform.eulerAngles.y);
-            target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
-        }
-        else if (Vector3.Distance(destination, transform.position) < 0.1f && Vector3.Distance(destination, transform.position) > 0f)
-        {
-            target = transform.position + Offset((int)transform.eulerAngles.y);
-            target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
-        }
+            if (Vector3.Distance(transform.position, destination) < 0.1f && Vector3.Distance(transform.position, destination) > 0f)
+            {
+                target = transform.position + Offset((int)transform.eulerAngles.y);
+                target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
+            }
+            else if (Vector3.Distance(destination, transform.position) < 0.1f && Vector3.Distance(destination, transform.position) > 0f)
+            {
+                target = transform.position + Offset((int)transform.eulerAngles.y);
+                target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
+            }
 
-        if (Physics.Linecast(transform.position, target, ~ignoreLayer))
-        {
-            Debug.Log("blocked");
+            if (Physics.Linecast(transform.position, target, ~ignoreLayer))
+            {
+                continousMovement = false;
+            }
+            else
+            {
+                destination = target;
+            }
         }
         else
         {
-            Debug.Log("unblocked");
-            destination = target;
+            if (Vector3.Distance(transform.position, destination) < 0.1f && Vector3.Distance(transform.position, destination) >= 0f)
+            {
+                if (Physics.Linecast(destination, target, ~ignoreLayer))
+                {
+                    continousMovement = true;
+                }
+                else
+                {
+                    destination = target;
+                    transform.eulerAngles = turnAngle;
+                    continousMovement = true;
+                }
+            }
+            else if (Vector3.Distance(destination, transform.position) < 0.1f && Vector3.Distance(destination, transform.position) >= 0f)
+            {
+                if (Physics.Linecast(destination, target, ~ignoreLayer))
+                {
+                    continousMovement = true;
+                }
+                else
+                {
+                    destination = target;
+                    transform.eulerAngles = turnAngle;
+                    continousMovement = true;
+                }
+            }
         }
     }
 
     bool IsIntersect(int angle)
     {
-        if (Physics.Linecast(transform.position, transform.position + Offset(angle), ~ignoreLayer))
-            return true;
-
         if (!makeTurn && transform.eulerAngles.y - angle != 180 && transform.eulerAngles.y - angle != -180)
             return true;
 
@@ -85,27 +114,39 @@ public class PlayerController : MonoBehaviour
     {
         if ((Input.GetKeyDown(KeyCode.W) || Input.GetKeyDown(KeyCode.UpArrow)) && !IsIntersect(0))
         {
-            transform.eulerAngles = Vector3.zero;
-            target = transform.position + Offset((int)transform.eulerAngles.y);
+            turnAngle = Vector3.zero;
+            target = destination + Offset((int)turnAngle.y);
             target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
+
+            if(continousMovement)
+                continousMovement = false;
         }
         else if ((Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow)) && !IsIntersect(90))
         {
-            transform.eulerAngles = new Vector3(0, 90, 0);
-            target = transform.position + Offset((int)transform.eulerAngles.y);
+            turnAngle = new Vector3(0, 90, 0);
+            target = destination + Offset((int)turnAngle.y);
             target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
+
+            if (continousMovement)
+                continousMovement = false;
         }
         else if ((Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow)) && !IsIntersect(270))
         {
-            transform.eulerAngles = new Vector3(0, 270, 0);
-            target = transform.position + Offset((int)transform.eulerAngles.y);
+            turnAngle = new Vector3(0, 270, 0);
+            target = destination + Offset((int)turnAngle.y);
             target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
+
+            if (continousMovement)
+                continousMovement = false;
         }
         else if ((Input.GetKeyDown(KeyCode.S) || Input.GetKeyDown(KeyCode.DownArrow)) && !IsIntersect(180))
         {
-            transform.eulerAngles = new Vector3(0, 180, 0);
-            target = transform.position + Offset((int)transform.eulerAngles.y);
+            turnAngle = new Vector3(0, 180, 0);
+            target = destination + Offset((int)turnAngle.y);
             target = new Vector3(Mathf.RoundToInt(target.x), target.y, Mathf.RoundToInt(target.z));
+
+            if (continousMovement)
+                continousMovement = false;
         }
     }
 
